@@ -1,0 +1,35 @@
+CREATE OR REPLACE PROCEDURE SYS.SP_PAGINATION(
+                  PageIndex   IN     INT,
+                  PageSize    IN     INT,                  
+                  TotalRow    OUT    INT,
+                  OUT         OUT    SYS_REFCURSOR
+)
+AS
+    FirstIndex   INT;
+    LastIndex    INT;
+    v_sql        VARCHAR2(4000);
+BEGIN
+---
+    FirstIndex := (PageIndex -1) * PageSize + 1;
+    LastIndex := PageSize * PageIndex ;
+
+----- get data
+
+v_sql := 'SELECT * FROM (
+    SELECT
+      uh."ID", uh."Full_Name",uh."Date_Of_Birth",uh."Gender",
+      row_number() over (ORDER BY uh."Date_Of_Birth" ASC) STT
+    FROM USERHYPER uh
+
+  ) WHERE STT BETWEEN '|| FIRSTINDEX || '  AND '|| LASTINDEX ||' ' ;
+
+------ return data
+
+    OPEN OUT FOR v_sql;
+
+------ return total record
+
+EXECUTE IMMEDIATE 'SELECT COUNT(*)  FROM USERHYPER'
+      INTO TotalRow;
+END;
+/

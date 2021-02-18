@@ -1,0 +1,65 @@
+CREATE OR REPLACE PROCEDURE SMART_EKYC.SP_SELECT_USER_IDCARD_PAGINATION(PPAGENUMBER  IN  INT,
+                                                                        PROWSPERPAGE IN  INT,
+                                                                        PWHERE       IN  VARCHAR2,
+                                                                        PORDER       IN  VARCHAR2,
+                                                                        PTOTALROW    OUT INT,
+                                                                        POUT         OUT SYS_REFCURSOR)
+  IS
+    PSQL        VARCHAR2(4000);
+    PQUERY      VARCHAR2(4000);
+    PSTARTROW   INT;
+    PENDROW     INT;
+    VPAGENUMBER INT;
+  BEGIN
+
+    --bat dau tu 1 nen phai tru bot di 1
+    IF PPAGENUMBER = 0
+    THEN
+      VPAGENUMBER := PPAGENUMBER;
+    ELSE
+      VPAGENUMBER := PPAGENUMBER - 1;
+    END IF;
+
+    -- calculate range
+    PSTARTROW := VPAGENUMBER * PROWSPERPAGE + 1;
+    PENDROW := (VPAGENUMBER + 1) * PROWSPERPAGE;
+
+    -- Get data
+    PQUERY := '
+        SELECT 
+    			ROW_NUMBER() OVER (ORDER BY tbl.' || NVL(PORDER, 'USER_IDCARD_ID') || ') AS rnum,
+    			TBL.USER_IDCARD_ID "id",
+          TBL.USER_BIOMETRIC_ID "biometricId",
+          TBL.IDCARD_NUMBER "identCardNumber",
+          TBL.IDCARD_TYPE "identCardType",
+          TBL.IDCARD_NAME "identCardName",
+          TBL.IDCARD_BIRTHDAY "identCardBirthDate",
+          TBL.IDCARD_GENDER "identCardGender",
+          TBL.IDCARD_RESIDENCE "identCardAdrResidence",
+          TBL.IDCARD_EXPIRE_DATE "identCardExpireDate",
+          TBL.IDCARD_ISSUE_DATE "identCardIssueDate",
+          TBL.IDCARD_ISSUE_PLACE "identCardIssuePlace",
+          TBL.IDCARD_ETHNIC "identCardEthnic",
+          TBL.IDCARD_NATION "identCardCountry",
+          TBL.IDCARD_ADR_DOMICILE "identCardAdrDomicile",
+          TBL.IDCARD_FRONT_FILE_ID,
+          TBL.IDCARD_BACK_FILE_ID,
+          TBL.IDCARD_FACE_FILE_ID,
+          TBL.IDCARD_FP2_FILE_ID,
+          TBL.IDCARD_FP7_FILE_ID,
+          TBL.IDCARD_BARCODE_FILE_ID,
+          TBL.IDCARD_DOI_FILE_ID,
+          TBL.CREATED_DATE "CreateDate"
+        FROM USER_IDCARD tbl
+        WHERE 1 = 1 ' || PWHERE;
+
+    -- return data for page
+    PSQL := 'SELECT pg.* FROM (' || PQUERY || ') pg WHERE pg.rnum >= ' || PSTARTROW || ' AND pg.rnum <= ' || PENDROW;
+    OPEN POUT FOR PSQL;
+
+    --  calculate total record
+    EXECUTE IMMEDIATE 'SELECT COUNT(*)  FROM (' || PQUERY || ')'
+      INTO PTOTALROW;
+
+  END SP_SELECT_USER_IDCARD_PAGINATION;
+/
